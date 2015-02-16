@@ -3,18 +3,11 @@ accesscontrol
 
 Access Control System Software
 
-This is the software for the access control system created for ctrl-h,
-a hackerspace in Portland, OR.
+This is the software for the access control system created for [Ctrl-H](http://ctrlh.org/),
+a hackerspace in Portland, OR.  
 
-Schematics will be available at some point.  Currently only the code
-is available.
+Schematics will be available at some point.  Check out the [Instructable](http://www.instructables.com/id/RFID-Access-Control-System/).
 
-Uses the wiegand library from https://github.com/monkeyboard/Wiegand-Protocol-Library-for-Arduino.
-
-The contents of the linino directory go into the Yun - preferably on an SD
-card.  Sample JSON config files are provided.
-
-The contents of the arduino directory go to the atmel chip through the arduino
-IDE.
+Uses the Raspberry Pi GPIO module from https://pypi.python.org/pypi/RPi.GPIO/ .
 
 contact rmiller @ duskglow dot com with questions.
