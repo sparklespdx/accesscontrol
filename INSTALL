@@ -18,6 +18,6 @@ $ cd ..
 # Crontab
 ###
 
-Edit access.cron and make sure it is using the correct path
+Edit crontab and make sure it is using the correct path
 
-$ sudo mv access.cron /etc/cron.d/access
+$ sudo mv crontab /etc/cron.d/access
