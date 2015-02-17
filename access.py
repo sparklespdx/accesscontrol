@@ -2,17 +2,20 @@
 #
 # vim: et ai sw=4
 
-import RPi.GPIO as GPIO
-import sys,time
-import signal
-import subprocess
 import json
 import smtplib
 import threading
+
+from RPi import GPIO
+import sys
+import time
+import signal
 import syslog
+
 
 debug_mode = False
 conf_dir = "./conf/"
+
 
 def initialize():
     GPIO.setmode(GPIO.BCM)
@@ -22,14 +25,15 @@ def initialize():
     setup_output_GPIOs()
     setup_readers()
     # Catch some exit signals
-    signal.signal(signal.SIGINT, cleanup)   # Ctrl-C
+    signal.signal(signal.SIGINT, cleanup)  # Ctrl-C
     signal.signal(signal.SIGTERM, cleanup)  # killall python
     # These signals will reload users
-    signal.signal(signal.SIGHUP, rehash)    # killall -HUP python
-    signal.signal(signal.SIGUSR2, rehash)   # killall -USR2 python
+    signal.signal(signal.SIGHUP, rehash)  # killall -HUP python
+    signal.signal(signal.SIGUSR2, rehash)  # killall -USR2 python
     # This one will toggle debug messages
-    signal.signal(signal.SIGWINCH, toggle_debug)    # killall -WINCH python
+    signal.signal(signal.SIGWINCH, toggle_debug)  # killall -WINCH python
     report("%s access control is online" % zone)
+
 
 def report(subject):
     syslog.syslog(subject)
@@ -39,9 +43,11 @@ def report(subject):
         t = threading.Thread(target=send_email, args=(subject,))
         t.start()
 
+
 def debug(message):
     if debug_mode:
         print message
+
 
 def send_email(subject, body=""):
     try:
@@ -57,10 +63,12 @@ def send_email(subject, body=""):
         # couldn't send.
         pass
 
+
 def rehash(signal=None, b=None):
     global users
     report("Reloading access list")
     users = load_json(conf_dir + "users.json")
+
 
 def read_configs():
     global zone, users, config, locker, lockerzone
@@ -72,11 +80,13 @@ def read_configs():
         lockerzone = jzone["lockerzone"]
         locker = load_json(conf_dir + "locker.json")
 
+
 def load_json(filename):
     file_handle = open(filename)
     config = json.load(file_handle)
     file_handle.close()
     return config
+
 
 def setup_output_GPIOs():
     if (zone == "locker"):
@@ -88,24 +98,30 @@ def setup_output_GPIOs():
         zone_by_pin[config[zone]["latch_gpio"]] = zone
         init_GPIO(config[zone]["latch_gpio"])
 
+
 def init_GPIO(gpio):
     GPIO.setup(gpio, GPIO.OUT)
     lock(gpio)
 
+
 def lock(gpio):
-    GPIO.output(gpio, active(gpio)^1)
+    GPIO.output(gpio, active(gpio) ^ 1)
+
 
 def unlock(gpio):
     GPIO.output(gpio, active(gpio))
+
 
 def active(gpio):
     zone = zone_by_pin[gpio]
     return config[zone]["unlock_value"]
 
+
 def unlock_briefly(gpio):
     unlock(gpio)
     time.sleep(config[zone]["open_delay"])
     lock(gpio)
+
 
 def setup_readers():
     global zone_by_pin
@@ -128,6 +144,7 @@ def setup_readers():
             GPIO.add_event_detect(reader["d1"], GPIO.FALLING,
                                   callback=data_pulse)
 
+
 def data_pulse(channel):
     reader = config[zone_by_pin[channel]]
     if channel == reader["d0"]:
@@ -136,11 +153,13 @@ def data_pulse(channel):
         reader["stream"] += "1"
     kick_timer(reader)
 
+
 def kick_timer(reader):
     if reader["timer"] is None:
         reader["timer"] = threading.Timer(0.2, wiegand_stream_done,
                                           args=[reader])
         reader["timer"].start()
+
 
 def wiegand_stream_done(reader):
     if reader["stream"] == "":
@@ -149,6 +168,7 @@ def wiegand_stream_done(reader):
     reader["stream"] = ""
     reader["timer"] = None
     validate_bits(bitstring)
+
 
 def validate_bits(bstr):
     if len(bstr) != 26:
@@ -164,8 +184,8 @@ def validate_bits(bstr):
     calculated_lparity = 0
     calculated_rparity = 1
     for iter in range(0, 12):
-        calculated_lparity ^= int(bstr[iter+1])
-        calculated_rparity ^= int(bstr[iter+13])
+        calculated_lparity ^= int(bstr[iter + 1])
+        calculated_rparity ^= int(bstr[iter + 13])
     if (calculated_lparity != lparity or calculated_rparity != rparity):
         debug("Parity error in received string!")
         return False
@@ -174,6 +194,7 @@ def validate_bits(bstr):
     debug("Successfully decoded %s facility=%i user=%i" %
           (card_id, facility, user_id))
     lookup_card(card_id, str(facility), str(user_id))
+
 
 def lookup_card(card_id, facility, user_id):
     user = (users.get("%s,%s" % (facility, user_id)) or
@@ -191,9 +212,11 @@ def lookup_card(card_id, facility, user_id):
         debug("user isn't authorized for this zone")
         reject_card()
 
+
 def reject_card():
     report("A card was presented at %s and access was denied" % zone)
     return False
+
 
 def open_locker(user):
     userlocker = user["locker"]
@@ -203,9 +226,11 @@ def open_locker(user):
         report("%s has opened their locker" % public_name(user))
         unlock_briefly(locker[userlocker]["latch_gpio"])
 
+
 def public_name(user):
     first, last = user["name"].split(" ")
     return "%s %s." % (first, last[0])
+
 
 def open_door(user):
     global open_hours, last_name, repeat_read_timeout, repeat_read_count
@@ -232,6 +257,7 @@ def open_door(user):
             unlock_briefly(config[zone]["latch_gpio"])
             report("%s has entered %s" % (name, zone))
 
+
 def toggle_debug(a=None, b=None):
     global debug_mode
     if debug_mode:
@@ -239,6 +265,7 @@ def toggle_debug(a=None, b=None):
     debug_mode ^= True
     if debug_mode:
         debug("Enabling debug messages")
+
 
 def cleanup(a=None, b=None):
     message = ""
