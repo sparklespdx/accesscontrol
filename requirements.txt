@@ -1,1 +1,2 @@
 RPi.GPIO==0.5.11
+PyDispatcher==2.0.5

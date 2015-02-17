@@ -13,14 +13,105 @@ import signal
 import syslog
 
 
-debug_mode = False
+class Config(object):
+    def __init__(self):
+        self.configs = {}
+
+    def add_config_file(self, filename):
+        try:
+            with open(filename) as file_handle:
+                config = json.load(file_handle)
+                self.configs[filename] = config
+        except IOError:
+            self.configs[filename] = {}
+
+    def __getitem__(self, item):
+        for config in self.configs.values():
+            val = config.get(item)
+            if val is not None:
+                return val
+        return None
+
+    def __getattr__(self, item):
+        if item in self.configs:
+            return self.configs[item]
+        raise AttributeError()
+
+
+class CardReader(object):
+    # when scan happens, check for authorization, and fire events if successful
+    pass
+
+
+class Door(object):
+    # when associate reader sends event, open
+    pass
+
+
+class Locker(object):
+    # when associated reader sends read event, open correct user's locker
+    pass
+
+
+class AdvancedRule(object):
+    # can subscribe to any events (signals, card reads, successful card authorizations,
+    # time(?), door open/close.
+    # has access to all system information
+    # can alter the structure of readers, doors, configs, rules.
+    # maybe we just initialize these with a global function and let it do whatever...
+    pass
+
+
+class Logger(object):
+    def __init__(self, config):
+        self.config = config
+        self.debug_mode = False
+
+    def debug(self, message):
+        if self.debug_mode:
+            print message
+
+    def toggle_debug(self):
+        if self.debug_mode:
+            logger.debug("Disabling debug messages")
+        self.debug_mode ^= True
+        if self.debug_mode:
+            logger.debug("Enabling debug messages")
+
+    def send_email(self, subject, body=""):
+        try:
+            emailfrom = self.config["emailfrom"]
+            to = self.config["emailto"]
+            smtpserver = smtplib.SMTP(self.config["emailserver"], self.config["emailport"])
+            smtpserver.ehlo()
+            header = "To: %s\nFrom: %s\nSubject: %s\n" % (to, emailfrom, subject)
+            msg = "%s\n%s\n\n" % (header, body)
+            smtpserver.sendmail(emailfrom, to, msg)
+            smtpserver.close()
+        except smtplib.SMTPException:
+            # couldn't send.
+            pass
+
+    def report(self, subject):
+        syslog.syslog(subject)
+        self.debug(subject)
+        if self.config.get("emailserver"):
+            # TODO: does send_email need to be a function
+            t = threading.Thread(target=self.send_email, args=[subject])
+            t.start()
+
+
+config = Config()
+logger = Logger(config)
+
+
 conf_dir = "./conf/"
 
 
 def initialize():
     GPIO.setmode(GPIO.BCM)
     syslog.openlog("accesscontrol", syslog.LOG_PID, syslog.LOG_AUTH)
-    report("Initializing")
+    logger.report("Initializing")
     read_configs()
     setup_output_GPIOs()
     setup_readers()
@@ -32,60 +123,18 @@ def initialize():
     signal.signal(signal.SIGUSR2, rehash)  # killall -USR2 python
     # This one will toggle debug messages
     signal.signal(signal.SIGWINCH, toggle_debug)  # killall -WINCH python
-    report("%s access control is online" % zone)
-
-
-def report(subject):
-    syslog.syslog(subject)
-    debug(subject)
-    if config and config.get("emailserver"):
-        # The trailing comma in args=() below is required to truncate args
-        t = threading.Thread(target=send_email, args=(subject,))
-        t.start()
-
-
-def debug(message):
-    if debug_mode:
-        print message
-
-
-def send_email(subject, body=""):
-    try:
-        emailfrom = config["emailfrom"]
-        to = config["emailto"]
-        smtpserver = smtplib.SMTP(config["emailserver"], config["emailport"])
-        smtpserver.ehlo()
-        header = "To: %s\nFrom: %s\nSubject: %s\n" % (to, emailfrom, subject)
-        msg = "%s\n%s\n\n" % (header, body)
-        smtpserver.sendmail(emailfrom, to, msg)
-        smtpserver.close()
-    except smtplib.SMTPException:
-        # couldn't send.
-        pass
+    logger.report("%s access control is online" % zone)
 
 
 def rehash(signal=None, b=None):
-    global users
-    report("Reloading access list")
-    users = load_json(conf_dir + "users.json")
+    logger.report("Reloading access list")
+    config.add_config_file(conf_dir + "users.json")
 
 
-def read_configs():
-    global zone, users, config, locker, lockerzone
-    jzone = load_json(conf_dir + "zone.json")
-    users = load_json(conf_dir + "users.json")
-    config = load_json(conf_dir + "config.json")
-    zone = jzone["zone"]
-    if zone == "locker":
-        lockerzone = jzone["lockerzone"]
-        locker = load_json(conf_dir + "locker.json")
-
-
-def load_json(filename):
-    file_handle = open(filename)
-    config = json.load(file_handle)
-    file_handle.close()
-    return config
+def read_configs(config):
+    config.add_config_file(conf_dir + "users.json")
+    config.add_config_file(conf_dir + "config.json")
+    config.add_config_file(conf_dir + "locker.json")
 
 
 def setup_output_GPIOs():
@@ -172,14 +221,14 @@ def wiegand_stream_done(reader):
 
 def validate_bits(bstr):
     if len(bstr) != 26:
-        debug("Incorrect string length received: %i" % len(bstr))
-        debug(":%s:" % bstr)
+        logger.debug("Incorrect string length received: %i" % len(bstr))
+        logger.debug(":%s:" % bstr)
         return False
     lparity = int(bstr[0])
     facility = int(bstr[1:9], 2)
     user_id = int(bstr[9:25], 2)
     rparity = int(bstr[25])
-    debug("%s is: %i %i %i %i" % (bstr, lparity, facility, user_id, rparity))
+    logger.debug("%s is: %i %i %i %i" % (bstr, lparity, facility, user_id, rparity))
 
     calculated_lparity = 0
     calculated_rparity = 1
@@ -187,11 +236,11 @@ def validate_bits(bstr):
         calculated_lparity ^= int(bstr[iter + 1])
         calculated_rparity ^= int(bstr[iter + 13])
     if (calculated_lparity != lparity or calculated_rparity != rparity):
-        debug("Parity error in received string!")
+        logger.debug("Parity error in received string!")
         return False
 
     card_id = "%08x" % int(bstr, 2)
-    debug("Successfully decoded %s facility=%i user=%i" %
+    logger.debug("Successfully decoded %s facility=%i user=%i" %
           (card_id, facility, user_id))
     lookup_card(card_id, str(facility), str(user_id))
 
@@ -202,28 +251,28 @@ def lookup_card(card_id, facility, user_id):
             users.get(card_id.upper()) or
             users.get(user_id))
     if (user is None):
-        debug("couldn't find user")
+        logger.debug("couldn't find user")
         return reject_card()
     if (zone == "locker" and user.get("locker")):
         open_locker(user)
     elif (user.get(zone) and user[zone] == "authorized"):
         open_door(user)
     else:
-        debug("user isn't authorized for this zone")
+        logger.debug("user isn't authorized for this zone")
         reject_card()
 
 
 def reject_card():
-    report("A card was presented at %s and access was denied" % zone)
+    logger.report("A card was presented at %s and access was denied" % zone)
     return False
 
 
 def open_locker(user):
     userlocker = user["locker"]
     if locker.get(userlocker) is None:
-        return debug("%s's locker does not exist" % user["name"])
+        return logger.debug("%s's locker does not exist" % user["name"])
     if (locker[userlocker]["zone"] == lockerzone):
-        report("%s has opened their locker" % public_name(user))
+        logger.report("%s has opened their locker" % public_name(user))
         unlock_briefly(locker[userlocker]["latch_gpio"])
 
 
@@ -246,25 +295,16 @@ def open_door(user):
         config[zone]["unlocked"] ^= True
         if config[zone]["unlocked"]:
             unlock(config[zone]["latch_gpio"])
-            report("%s unlocked by %s" % (zone, name))
+            logger.report("%s unlocked by %s" % (zone, name))
         else:
             lock(config[zone]["latch_gpio"])
-            report("%s locked by %s" % (zone, name))
+            logger.report("%s locked by %s" % (zone, name))
     else:
         if config[zone]["unlocked"]:
-            report("%s found %s is already unlocked" % (name, zone))
+            logger.report("%s found %s is already unlocked" % (name, zone))
         else:
             unlock_briefly(config[zone]["latch_gpio"])
-            report("%s has entered %s" % (name, zone))
-
-
-def toggle_debug(a=None, b=None):
-    global debug_mode
-    if debug_mode:
-        debug("Disabling debug messages")
-    debug_mode ^= True
-    if debug_mode:
-        debug("Enabling debug messages")
+            logger.report("%s has entered %s" % (name, zone))
 
 
 def cleanup(a=None, b=None):
@@ -272,23 +312,18 @@ def cleanup(a=None, b=None):
     if zone:
         message = "%s " % zone
     message += "access control is going offline"
-    report(message)
+    logger.report(message)
     GPIO.setwarnings(False)
     GPIO.cleanup()
     sys.exit(0)
 
-# Globalize some variables for later
-zone = None
-users = None
-config = None
-locker = None
-last_name = None
-lockerzone = None
 zone_by_pin = {}
 repeat_read_count = 0
 repeat_read_timeout = time.time()
 
-initialize()
-while True:
-    # The main thread should open a command socket or something
-    time.sleep(1000)
+
+if __file__ == '__main__':
+    initialize()
+    while True:
+        # The main thread should open a command socket or something
+        time.sleep(1000)
