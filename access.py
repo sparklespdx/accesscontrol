@@ -67,7 +67,12 @@ def send_email(subject, body=""):
 def rehash(signal=None, b=None):
     global users
     report("Reloading access list")
-    users = load_json(conf_dir + "users.json")
+    try:
+        temp_users = load_json(conf_dir + "users.json")
+        if temp_users > 0:
+            users = temp_users
+    except ValueError:
+        report("Unable to load access list.  Please check for syntax errors.")
 
 
 def read_configs():
