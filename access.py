@@ -101,6 +101,7 @@ class CardReader(object):
         self.d0 = config["data0"]
         self.d1 = config["data1"]
 	self.permissions = config["permissions"]
+	self.permissions.append(self.name)
         GPIO.setup(self.d0, GPIO.IN)
         GPIO.setup(self.d1, GPIO.IN)
         GPIO.add_event_detect(self.d0, GPIO.FALLING,
