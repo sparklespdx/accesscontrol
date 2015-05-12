@@ -1,50 +1,87 @@
 {
-	"emailfrom": "access@yourdomain.com",
-	"emailto": "you@yourdomain.com",
-	"#": "Leave emailserver blank and no emails will be sent",
-	"emailserver": "",
-	"emailport": 25,
-
+  "emailfrom": "access@yourdomain.com",
+  "emailto": "you@yourdomain.com",
+  "#": "Leave emailserver blank and no emails will be sent",
+  "emailserver": "",
+  "emailport": 25,
   "readers": [
+    {
+      "name": "front door",
+      "is_locker": false,
+      "data0": 4,
+      "data1": 17,
+      "led": "60.0",
+      "doors": [
+        {
+          "name": "front door",
+          "latch_gpio": "60.4",
+          "unlock_value": 1,
+          "open_delay": 1.5
+        }
+      ],
+      "permissions": [
+        "active user"
+      ]
+    },
+    {
+      "name": "side door",
+      "is_locker": false,
+      "data0": 22,
+      "data1": 10,
+      "led": "60.1",
+      "doors": [
+        {
+          "name": "side door",
+          "latch_gpio": "60.5",
+          "unlock_value": 1,
+          "open_delay": 1.5
+        }
+      ],
+      "permissions": [
+        "active user",
+        "side door"
+      ]
+    },
+    {
+      "name": "back door",
+      "is_locker": false,
+      "data0": 9,
+      "data1": 11,
+      "led": "60.2",
+      "doors": [
+        {
+          "name": "back door",
+          "latch_gpio": "60.6",
+          "unlock_value": 1,
+          "open_delay": 1.5
+        }
+      ],
+      "permissions": [
+        "active user"
+      ]
+    },
     {
       "name": "lockers",
       "is_locker": true,
-      "data0": 23,
-      "data1": 25,
+      "data0": 7,
+      "data1": 8,
       "doors": [
         {
           "name": "A",
-          "latch_gpio": 18,
-          "unlock_value": 0,
+          "latch_gpio": "60.7",
+          "unlock_value": 1,
           "open_delay": 2
         },
         {
           "name": "B",
-          "latch_gpio": 17,
-          "unlock_value": 0,
+          "latch_gpio": "60.3",
+          "unlock_value": 1,
           "open_delay": 2
         }
       ],
       "permissions": [
         "*"
       ]
-    },
-    {
-      "name": "front door",
-      "is_locker": false,
-      "data0": 23,
-      "data1": 25,
-      "doors": [
-        {
-          "name": "front door",
-          "latch_gpio": 18,
-          "unlock_value": 1,
-          "open_delay": 0.1
-        }
-      ],
-      "permissions": [
-        "active user"
-      ]
     }
-  ],
+  ]
 }
