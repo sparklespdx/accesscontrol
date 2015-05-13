@@ -16,15 +16,21 @@ import socket
 
 conf_dir = "./conf/"
 
+
 class Config(object):
+
     def __init__(self):
         self.configs = {"i2c":{}}
 
     def add_config_file(self, filename):
         try:
             with open(conf_dir + filename + ".json") as file_handle:
-                config = json.load(file_handle)
-                self.configs[filename] = config
+		try:
+		    config = json.load(file_handle)
+		    if config > 0:
+			self.configs[filename] = config
+		except ValueError:
+		    logger.report("Unable to load %s file.  Please check for syntax errors." % filename)
         except IOError:
             self.configs[filename] = {}	# FIXME figure out how to revert on a bad read
 
@@ -42,7 +48,8 @@ class Config(object):
 
 
 class Output(object):
-    """ GPIOs and I2C shift-register outputs """
+    # GPIOs and I2C shift-register outputs
+
     def __init__(self, address, unlock_value, open_delay):
 	if type(address) is int:
 	    GPIO.setup(address, GPIO.OUT)
@@ -63,7 +70,7 @@ class Output(object):
 		config.i2c[addr] |= 1 << bit
 	    else:
 		config.i2c[addr] &= 1 << bit ^ 0xFF
-	    bus.write_byte_data(addr, 0x44, config.i2c[addr])
+	    bus.write_byte_data(addr, 0x44, config.i2c[addr])	# TPIC2810 compatible
 	else:
 	    debug("gpio is unknown type: %s" % type(self.address))
 
@@ -81,10 +88,11 @@ class Output(object):
 
 class CardReader(object):
     # when scan happens, validate, check for authorization, and fire events if successful
+
     def __init__(self, config):
         if config["name"] == "<door_name>":
             return None
-        if config["is_locker"] == "true":
+        if config["is_locker"]:
 	    self.is_locker = True
             self.lockers = []
             for locker in config["doors"]:
@@ -98,27 +106,27 @@ class CardReader(object):
         self.stream = ""
         self.timer = None
         self.unlocked = False
-        self.d0 = config["data0"]
-        self.d1 = config["data1"]
+        self.data0 = config["data0"]
+        self.data1 = config["data1"]
 	self.permissions = config["permissions"]
 	self.permissions.append(self.name)
-        GPIO.setup(self.d0, GPIO.IN)
-        GPIO.setup(self.d1, GPIO.IN)
-        GPIO.add_event_detect(self.d0, GPIO.FALLING,
+        GPIO.setup(self.data0, GPIO.IN)
+        GPIO.setup(self.data1, GPIO.IN)
+        GPIO.add_event_detect(self.data0, GPIO.FALLING,
                               callback=self.data_pulse)
-        GPIO.add_event_detect(self.d1, GPIO.FALLING,
+        GPIO.add_event_detect(self.data1, GPIO.FALLING,
                               callback=self.data_pulse)
 
-    def find_locker(self, number):
+    def find_locker(self, name):
         for locker in self.lockers:
-            if locker.number == number:
+            if locker.name == name:
                 return locker
         return None
 
     def data_pulse(self, channel):
-        if channel == self.d0:
+        if channel == self.data0:
             self.stream += "0"
-        elif channel == self.d1:
+        elif channel == self.data1:
             self.stream += "1"
         self.kick_timer()
 
@@ -130,22 +138,21 @@ class CardReader(object):
     def wiegand_stream_done(self):
         if self.stream == "":
             return
-        this_stream = self.stream
+        bstr = self.stream
         self.stream = ""
         self.timer = None
-        self.validate_bits(this_stream)
 
-    def validate_bits(self, bstr):
         # verify length and split into components
         if len(bstr) != 26:
-            logger.debug("Incorrect string length received: %i" % len(bstr))
-            logger.debug(":%s:" % bstr)
+            logger.debug("%s received bad string length: %i\n:%s:" %
+                    (self.name, len(bstr), bstr))
             return False
         lparity = int(bstr[0])
         facility = str(int(bstr[1:9], 2))
         user_id = str(int(bstr[9:25], 2))
         rparity = int(bstr[25])
-        logger.debug("%s is: %i %s %s %i" % (bstr, lparity, facility, user_id, rparity))
+        logger.debug("%s %s is: %i %s %s %i" %
+                (self.name, bstr, lparity, facility, user_id, rparity))
 
         # verify parity
         calculated_lparity = 0
@@ -154,12 +161,12 @@ class CardReader(object):
             calculated_lparity ^= int(bstr[iter + 1])
             calculated_rparity ^= int(bstr[iter + 13])
         if (calculated_lparity != lparity or calculated_rparity != rparity):
-            logger.debug("Parity error in received string!")
+            logger.debug("%s received string with bad parity!" % self.name)
             return False
 
         card_id = "%08x" % int(bstr, 2)
-        logger.debug("Successfully decoded %s facility=%s user=%s" %
-              (card_id, facility, user_id))
+        logger.debug("%s successfully decoded %s facility=%s user=%s" %
+              (self.name, card_id, facility, user_id))
 
         # lookup card
         user = (config.users.get("%s,%s" % (facility, user_id)) or
@@ -170,14 +177,16 @@ class CardReader(object):
             logger.debug("couldn't find user")
             return self.reject_card()
         if (self.is_locker and user.get("locker")):
-            if self.find_locker(user["locker"]) is None:
-                return logger.debug("%s's locker does not exist" % user["name"])
-            self.find_locker(user["locker"]).open_locker(user)
+	    found_locker = self.find_locker(user["locker"])
+	    if found_locker is None:
+                return logger.debug("%s does not have a locker" % user["name"])
+	    return found_locker.open_locker(user)
         else:
 	    for my_permission in self.permissions:
-		if my_permission in user["permissions"]:
+		if my_permission == "*" or my_permission in user["permissions"]:
 		    return self.door.open_door(user)
-	logger.debug("user isn't authorized for this reader")
+	logger.debug("%s is not authorized for %s" %
+                (user["name"], self.name))
 	self.reject_card()
 
     def reject_card(self):
@@ -230,23 +239,17 @@ class Door(object):
 
 class Locker(object):
     # when associated reader sends read event, open correct user's locker
-    """ All of the Locker stuff is completely untested """
-    def __init__(self, config, reader):
-        self.name = "locker %i" % config["name"]
-        self.reader = reader
-        self.latch_gpio = config["latch_gpio"]
-        self.active = config["unlock_value"]
-        self.open_delay = config["open_delay"]
-        self.unlocked = False
-        GPIO.setup(self.latch_gpio, GPIO.OUT)
-        self.lock()
 
-    def open_locker(user):
-        logger.report(
-                "%s has opened %" % (logger.public_name(user), self.name))
-        GPIO.output(self.latch_gpio, self.active)
-        time.sleep(self.open_delay)
-        GPIO.output(self.latch_gpio, self.active ^ 1)
+    def __init__(self, config, reader):
+        self.name = config["name"]
+        self.reader = reader
+        self.latch = Output(config["latch_gpio"], config["unlock_value"], config["open_delay"])
+        #self.unlocked = False
+
+    def open_locker(self, user):
+        logger.report("%s has opened locker %s" %
+                (logger.public_name(user), self.name))
+	self.latch.timed_activation()
 
 
 class AdvancedRule(object):
@@ -259,6 +262,7 @@ class AdvancedRule(object):
 
 
 class Logger(object):
+
     def __init__(self, config):
         self.config = config
         self.debug_mode = False
@@ -309,11 +313,11 @@ def initialize(config, logger):
     config.add_config_file("users")
     setup_readers()
     # Catch some exit signals
-    signal.signal(signal.SIGINT, cleanup)  # Ctrl-C
+    signal.signal(signal.SIGINT, cleanup)   # Ctrl-C
     signal.signal(signal.SIGTERM, cleanup)  # killall python
     # These signals will reload users
-    signal.signal(signal.SIGHUP, rehash)  # killall -HUP python
-    signal.signal(signal.SIGUSR2, rehash)  # killall -USR2 python
+    signal.signal(signal.SIGHUP, rehash)    # killall -HUP python
+    signal.signal(signal.SIGUSR2, rehash)   # killall -USR2 python
     # This one will toggle debug messages
     signal.signal(signal.SIGWINCH, logger.toggle_debug)  # killall -WINCH python
     logger.report("%s access control is online" % socket.gethostname())

@@ -70,13 +70,13 @@
           "name": "A",
           "latch_gpio": "60.7",
           "unlock_value": 1,
-          "open_delay": 2
+          "open_delay": 0.2
         },
         {
           "name": "B",
           "latch_gpio": "60.3",
           "unlock_value": 1,
-          "open_delay": 2
+          "open_delay": 0.2
         }
       ],
       "permissions": [
