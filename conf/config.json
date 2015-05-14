@@ -19,9 +19,7 @@
           "open_delay": 1.5
         }
       ],
-      "permissions": [
-        "active user"
-      ]
+      "permissions": ["active user"]
     },
     {
       "name": "side door",
@@ -37,10 +35,7 @@
           "open_delay": 1.5
         }
       ],
-      "permissions": [
-        "active user",
-        "side door"
-      ]
+      "permissions": ["active user"]
     },
     {
       "name": "back door",
@@ -56,9 +51,7 @@
           "open_delay": 1.5
         }
       ],
-      "permissions": [
-        "active user"
-      ]
+      "permissions": ["active user"]
     },
     {
       "name": "lockers",
@@ -68,20 +61,18 @@
       "doors": [
         {
           "name": "A",
-          "latch_gpio": "60.7",
+          "latch_gpio": "60.3",
           "unlock_value": 1,
           "open_delay": 0.2
         },
         {
           "name": "B",
-          "latch_gpio": "60.3",
+          "latch_gpio": "60.7",
           "unlock_value": 1,
           "open_delay": 0.2
         }
       ],
-      "permissions": [
-        "*"
-      ]
+      "permissions": ["*"]
     }
   ]
 }
