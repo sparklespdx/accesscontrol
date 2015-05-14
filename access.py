@@ -89,26 +89,26 @@ class Output(object):
 class CardReader(object):
     # when scan happens, validate, check for authorization, and fire events if successful
 
-    def __init__(self, config):
-        if config["name"] == "<door_name>":
+    def __init__(self, reader_config):
+        if reader_config["name"] == "<door_name>":
             return None
-        if config["is_locker"]:
+        if reader_config["is_locker"]:
 	    self.is_locker = True
             self.lockers = []
-            for locker in config["doors"]:
+            for locker in reader_config["doors"]:
                 self.lockers.append(Locker(locker, self))
         else:
 	    self.is_locker = False
-            self.door = Door(config["doors"][0], self)
-	if config.get("led"):
-            self.led = Output(config["led"], 1, 1)
-        self.name = config["name"]
+            self.door = Door(reader_config["doors"][0], self)
+	if reader_config.get("led"):
+            self.led = Output(reader_config["led"], 1, 1)
+        self.name = reader_config["name"]
         self.stream = ""
         self.timer = None
         self.unlocked = False
-        self.data0 = config["data0"]
-        self.data1 = config["data1"]
-	self.permissions = config["permissions"]
+        self.data0 = reader_config["data0"]
+        self.data1 = reader_config["data1"]
+	self.permissions = reader_config["permissions"]
 	self.permissions.append(self.name)
         GPIO.setup(self.data0, GPIO.IN)
         GPIO.setup(self.data1, GPIO.IN)
@@ -197,10 +197,10 @@ class CardReader(object):
 class Door(object):
     # when associate reader sends event, open
 
-    def __init__(self, config, reader):
+    def __init__(self, door_config, reader):
         self.reader = reader
-        self.name = config["name"]
-        self.latch = Output(config["latch_gpio"], config["unlock_value"], config["open_delay"])
+        self.name = door_config["name"]
+        self.latch = Output(door_config["latch_gpio"], door_config["unlock_value"], door_config["open_delay"])
         self.unlocked = False
         self.repeat_read_count = 0
         self.repeat_read_timeout = time.time()
@@ -240,10 +240,10 @@ class Door(object):
 class Locker(object):
     # when associated reader sends read event, open correct user's locker
 
-    def __init__(self, config, reader):
-        self.name = config["name"]
+    def __init__(self, locker_config, reader):
+        self.name = locker_config["name"]
         self.reader = reader
-        self.latch = Output(config["latch_gpio"], config["unlock_value"], config["open_delay"])
+        self.latch = Output(locker_config["latch_gpio"], locker_config["unlock_value"], locker_config["open_delay"])
         #self.unlocked = False
 
     def open_locker(self, user):
