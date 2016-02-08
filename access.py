@@ -30,7 +30,8 @@ class Config(object):
 		    if config > 0:
 			self.configs[filename] = config
 		except ValueError:
-		    logger.report("Unable to load %s file.  Please check for syntax errors." % filename)
+		    logger.report("%s unable to load %s file.  Please check for syntax errors." %
+				(socket.gethostname(), filename))
         except IOError:
             self.configs[filename] = {}	# FIXME figure out how to revert on a bad read
 
@@ -190,7 +191,8 @@ class CardReader(object):
 	self.reject_card()
 
     def reject_card(self):
-        logger.report("A card was presented at %s and access was denied" % self.name)
+        logger.report("A card was presented at %s %s and access was denied" %
+		    (socket.gethostname(), self.name))
         return False
 
 
@@ -218,22 +220,22 @@ class Door(object):
         if (self.repeat_read_count >= 2):
             self.unlocked ^= True
             if self.unlocked:
-                logger.report("%s unlocked by %s" %
-                            (self.name, public_name))
+                logger.report("%s %s unlocked by %s" %
+                            (socket.gethostname(), self.name, public_name))
                 self.latch.activate()
 		self.reader.led.activate()	# FIXME what if this reader doesn't have an LED?
             else:
-                logger.report("%s locked by %s" %
-                            (self.name, public_name))
+                logger.report("%s %s locked by %s" %
+                            (socket.gethostname(), self.name, public_name))
                 self.latch.deactivate()
 		self.reader.led.deactivate()	# FIXME what if this reader doesn't have an LED?
         else:
             if self.unlocked:
-                logger.report("%s found %s is already unlocked" %
-                            (public_name, self.name))
+                logger.report("%s found %s %s is already unlocked" %
+                            (public_name, socket.gethostname(), self.name))
             else:
-                logger.report("%s has entered %s" %
-                            (public_name, self.name))
+                logger.report("%s has opened %s %s" %
+                            (public_name, socket.gethostname(), self.name))
                 self.latch.timed_activation()
 
 
@@ -247,8 +249,8 @@ class Locker(object):
         #self.unlocked = False
 
     def open_locker(self, user):
-        logger.report("%s has opened locker %s" %
-                (logger.public_name(user), self.name))
+        logger.report("%s has opened %s locker %s" %
+                (logger.public_name(user), socket.gethostname(), self.name))
 	self.latch.timed_activation()
 
 
@@ -323,7 +325,7 @@ def initialize(config, logger):
     logger.report("%s access control is online" % socket.gethostname())
 
 def rehash(signal=None, b=None):
-    logger.report("Reloading access list")
+    logger.report("%s reloading access list" % socket.gethostname())
     config.add_config_file("users")
 
 def setup_readers():
@@ -331,8 +333,7 @@ def setup_readers():
 	CardReader(reader)
 
 def cleanup(a=None, b=None):
-    message = "%s access control is going offline" % socket.gethostname()
-    logger.report(message)
+    logger.report("%s access control is going offline" % socket.gethostname())
     GPIO.setwarnings(False)
     GPIO.cleanup()
     sys.exit(0)
