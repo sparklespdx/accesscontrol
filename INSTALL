@@ -7,7 +7,7 @@ things up physically may require more poking around.
 
 Check for latest version here: https://pypi.python.org/pypi/RPi.GPIO/
 
-$ wget https://pypi.python.org/packages/source/R/RPi.GPIO/RPi.GPIO-0.5.9.tar.gz
+$ wget https://pypi.python.org/packages/source/R/RPi.GPIO/RPi.GPIO-0.6.1.tar.gz
 $ tar zxf RPi.GPIO-*.tar.gz
 $ cd RPi.GPIO-*
 $ sudo python setup.py install
@@ -18,6 +18,7 @@ $ cd ..
 # Crontab
 ###
 
-Edit crontab and make sure it is using the correct path
+Edit crontab and start.sh, make sure they are using the correct path.
 
-$ sudo mv crontab /etc/cron.d/access
+ln -s $(pwd) /root/ac
+ln -s /root/ac/crontab /etc/cron.d/access
