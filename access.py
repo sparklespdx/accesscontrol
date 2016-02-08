@@ -272,6 +272,7 @@ class Logger(object):
     def debug(self, message):
         if self.debug_mode:
             print message
+            sys.stdout.flush()
 
     def toggle_debug(self, sig, frame):
         if self.debug_mode:
