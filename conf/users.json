@@ -1,16 +1,19 @@
 {
-	"<id>|<facility>,<user>|<user>": {
-		"name": "<name>",
-		"<zone>": "authorized",
-		"locker": "<locker>"
-	},
-	"0254008A": {
-		"name": "John Doe",
-		"maindoor": "authorized",
-		"locker": "3"
-	},
-	"42,69": {
-		"name": "Jane Doe",
-		"maindoor": "authorized"
-	}
+  "<id>|<facility>,<user>|<user>": {
+    "name": "<name>",
+    "locker": "<locker>",
+    "permissions": [
+      "active user", "section 4"
+    ]
+  },
+  "0254008A": {
+    "name": "John Doe",
+    "permissions": ["active user"],
+    "locker": "A"
+  },
+  "42,69": {
+    "name": "Jane Doe",
+    "permissions": ["active user"],
+    "locker": "B"
+  }
 }

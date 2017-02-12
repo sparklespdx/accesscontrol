@@ -1,25 +1,78 @@
 {
-	"emailfrom": "access@yourdomain.com",
-	"emailto": "you@yourdomain.com",
-	"#": "Leave emailserver blank and no emails will be sent",
-	"emailserver": "",
-	"emailport": 25,
-	"locker": {
-		"unlock_value": 0,
-		"open_delay": 2
-	},
-	"<zone>": {
-		"unlock_value": "<1|0: writing this value unlocks the door>",
-		"open_delay": "<seconds to unlock door for>",
-		"latch_gpio": "<GPIO number>",
-		"d0": "<Wiegand DATA0 GPIO number>",
-		"d1": "<Wiegand DATA1 GPIO number>"
-	},
-	"maindoor": {
-		"unlock_value": 1,
-		"open_delay": 0.1,
-		"latch_gpio": 18,
-		"d0": 23,
-		"d1": 25
-	}
+  "emailfrom": "access@yourdomain.com",
+  "emailto": "you@yourdomain.com",
+  "#": "Leave emailserver blank and no emails will be sent",
+  "emailserver": "",
+  "emailport": 25,
+  "readers": [
+    {
+      "name": "front door",
+      "is_locker": false,
+      "data0": 4,
+      "data1": 17,
+      "led": "60.0",
+      "doors": [
+        {
+          "name": "front door",
+          "latch_gpio": "60.4",
+          "unlock_value": 1,
+          "open_delay": 1.5
+        }
+      ],
+      "permissions": ["active user"]
+    },
+    {
+      "name": "side door",
+      "is_locker": false,
+      "data0": 22,
+      "data1": 10,
+      "led": "60.1",
+      "doors": [
+        {
+          "name": "side door",
+          "latch_gpio": "60.5",
+          "unlock_value": 1,
+          "open_delay": 1.5
+        }
+      ],
+      "permissions": ["active user"]
+    },
+    {
+      "name": "back door",
+      "is_locker": false,
+      "data0": 9,
+      "data1": 11,
+      "led": "60.2",
+      "doors": [
+        {
+          "name": "back door",
+          "latch_gpio": "60.6",
+          "unlock_value": 1,
+          "open_delay": 1.5
+        }
+      ],
+      "permissions": ["active user"]
+    },
+    {
+      "name": "lockers",
+      "is_locker": true,
+      "data0": 7,
+      "data1": 8,
+      "doors": [
+        {
+          "name": "A",
+          "latch_gpio": "60.3",
+          "unlock_value": 1,
+          "open_delay": 0.2
+        },
+        {
+          "name": "B",
+          "latch_gpio": "60.7",
+          "unlock_value": 1,
+          "open_delay": 0.2
+        }
+      ],
+      "permissions": ["*"]
+    }
+  ]
 }
