@@ -25,15 +25,15 @@ class Config(object):
     def add_config_file(self, filename):
         try:
             with open(conf_dir + filename + ".json") as file_handle:
-		try:
-		    config = json.load(file_handle)
-		    if config > 0:
-			self.configs[filename] = config
-		except ValueError:
-		    logger.report("%s unable to load %s file.  Please check for syntax errors." %
-				(socket.gethostname(), filename))
+                try:
+                    config = json.load(file_handle)
+                    if config > 0:
+                        self.configs[filename] = config
+                except ValueError:
+                    logger.report("%s unable to load %s file.  Please check for syntax errors." %
+                                (socket.gethostname(), filename))
         except IOError:
-            self.configs[filename] = {}	# FIXME figure out how to revert on a bad read
+            self.configs[filename] = {} # FIXME figure out how to revert on a bad read
 
     def __getitem__(self, item):
         for config in self.configs.values():
@@ -52,39 +52,39 @@ class Output(object):
     # GPIOs and I2C shift-register outputs
 
     def __init__(self, address, unlock_value, open_delay):
-	if type(address) is int:
-	    GPIO.setup(address, GPIO.OUT)
-	self.address = address
-	self.unlock_value = unlock_value
-	self.open_delay = open_delay
-	self.deactivate()
+        if type(address) is int:
+            GPIO.setup(address, GPIO.OUT)
+        self.address = address
+        self.unlock_value = unlock_value
+        self.open_delay = open_delay
+        self.deactivate()
 
     def set_out(self, go_active=False):
-	new_value = go_active ^ self.unlock_value ^ 1
-	if type(self.address) is int:
-	    GPIO.output(self.address, new_value)
-	elif type(self.address) is unicode:
-	    (addr, bit) = [int(x, 16) for x in self.address.split('.')]
-	    if not config.i2c.get(addr):
-		config.i2c[addr] = 0
-	    if new_value:
-		config.i2c[addr] |= 1 << bit
-	    else:
-		config.i2c[addr] &= 1 << bit ^ 0xFF
-	    bus.write_byte_data(addr, 0x44, config.i2c[addr])	# TPIC2810 compatible
-	else:
-	    debug("gpio is unknown type: %s" % type(self.address))
+        new_value = go_active ^ self.unlock_value ^ 1
+        if type(self.address) is int:
+            GPIO.output(self.address, new_value)
+        elif type(self.address) is unicode:
+            (addr, bit) = [int(x, 16) for x in self.address.split('.')]
+            if not config.i2c.get(addr):
+                config.i2c[addr] = 0
+            if new_value:
+                config.i2c[addr] |= 1 << bit
+            else:
+                config.i2c[addr] &= 1 << bit ^ 0xFF
+            bus.write_byte_data(addr, 0x44, config.i2c[addr])   # TPIC2810 compatible
+        else:
+            debug("gpio is unknown type: %s" % type(self.address))
 
     def deactivate(self):
-	self.set_out(False)
+        self.set_out(False)
 
     def activate(self):
-	self.set_out(True)
+        self.set_out(True)
 
     def timed_activation(self):
-	self.activate()
-	time.sleep(self.open_delay)
-	self.deactivate()
+        self.activate()
+        time.sleep(self.open_delay)
+        self.deactivate()
 
 
 class CardReader(object):
@@ -94,14 +94,14 @@ class CardReader(object):
         if reader_config["name"] == "<door_name>":
             return None
         if reader_config["is_locker"]:
-	    self.is_locker = True
+            self.is_locker = True
             self.lockers = []
             for locker in reader_config["doors"]:
                 self.lockers.append(Locker(locker, self))
         else:
-	    self.is_locker = False
+            self.is_locker = False
             self.door = Door(reader_config["doors"][0], self)
-	if reader_config.get("led"):
+        if reader_config.get("led"):
             self.led = Output(reader_config["led"], 1, 1)
         self.name = reader_config["name"]
         self.stream = ""
@@ -109,8 +109,8 @@ class CardReader(object):
         self.unlocked = False
         self.data0 = reader_config["data0"]
         self.data1 = reader_config["data1"]
-	self.permissions = reader_config["permissions"]
-	self.permissions.append(self.name)
+        self.permissions = reader_config["permissions"]
+        self.permissions.append(self.name)
         GPIO.setup(self.data0, GPIO.IN)
         GPIO.setup(self.data1, GPIO.IN)
         GPIO.add_event_detect(self.data0, GPIO.FALLING,
@@ -178,21 +178,21 @@ class CardReader(object):
             logger.debug("couldn't find user")
             return self.reject_card()
         if (self.is_locker and user.get("locker")):
-	    found_locker = self.find_locker(user["locker"])
-	    if found_locker is None:
+            found_locker = self.find_locker(user["locker"])
+            if found_locker is None:
                 return logger.debug("%s does not have a locker" % user["name"])
-	    return found_locker.open_locker(user)
+            return found_locker.open_locker(user)
         else:
-	    for my_permission in self.permissions:
-		if my_permission == "*" or my_permission in user["permissions"]:
-		    return self.door.open_door(user)
-	logger.debug("%s is not authorized for %s" %
+            for my_permission in self.permissions:
+                if my_permission == "*" or my_permission in user["permissions"]:
+                    return self.door.open_door(user)
+        logger.debug("%s is not authorized for %s" %
                 (user["name"], self.name))
-	self.reject_card()
+        self.reject_card()
 
     def reject_card(self):
         logger.report("A card was presented at %s %s and access was denied" %
-		    (socket.gethostname(), self.name))
+                    (socket.gethostname(), self.name))
         return False
 
 
@@ -204,31 +204,22 @@ class Door(object):
         self.name = door_config["name"]
         self.latch = Output(door_config["latch_gpio"], door_config["unlock_value"], door_config["open_delay"])
         self.unlocked = False
-        self.repeat_read_count = 0
-        self.repeat_read_timeout = time.time()
-        self.repeat_read_name = ""
 
     def open_door(self, user):
         now = time.time()
         public_name = logger.public_name(user)
-        if (public_name == self.repeat_read_name and now <= self.repeat_read_timeout):
-            self.repeat_read_count += 1
-        else:
-            self.repeat_read_count = 0
-            self.repeat_read_timeout = now + 30
-        self.repeat_read_name = public_name
-        if (self.repeat_read_count >= 2):
+        if "event mode" in user["permissions"]:
             self.unlocked ^= True
             if self.unlocked:
                 logger.report("%s %s unlocked by %s" %
                             (socket.gethostname(), self.name, public_name))
                 self.latch.activate()
-		self.reader.led.activate()	# FIXME what if this reader doesn't have an LED?
+                self.reader.led.activate()      # FIXME what if this reader doesn't have an LED?
             else:
                 logger.report("%s %s locked by %s" %
                             (socket.gethostname(), self.name, public_name))
                 self.latch.deactivate()
-		self.reader.led.deactivate()	# FIXME what if this reader doesn't have an LED?
+                self.reader.led.deactivate()    # FIXME what if this reader doesn't have an LED?
         else:
             if self.unlocked:
                 logger.report("%s found %s %s is already unlocked" %
@@ -251,7 +242,7 @@ class Locker(object):
     def open_locker(self, user):
         logger.report("%s has opened %s locker %s" %
                 (logger.public_name(user), socket.gethostname(), self.name))
-	self.latch.timed_activation()
+        self.latch.timed_activation()
 
 
 class AdvancedRule(object):
@@ -331,7 +322,7 @@ def rehash(signal=None, b=None):
 
 def setup_readers():
     for reader in iter(config["readers"]):
-	CardReader(reader)
+        CardReader(reader)
 
 def cleanup(a=None, b=None):
     logger.report("%s access control is going offline" % socket.gethostname())
