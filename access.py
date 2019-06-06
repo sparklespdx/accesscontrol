@@ -183,9 +183,14 @@ class CardReader(object):
                 return logger.debug("%s does not have a locker" % user["name"])
             return found_locker.open_locker(user)
         else:
+            # normal user auth
             for my_permission in self.permissions:
                 if my_permission == "*" or my_permission in user["permissions"]:
                     return self.door.open_door(user)
+            # event mode unlock
+            if "event mode" in user["permissions"]:
+                if self.door.last_opened > time.time() - 10 or self.door.unlocked:
+                    return self.door.toggle_lock(user)
         logger.debug("%s is not authorized for %s" %
                 (user["name"], self.name))
         self.reject_card()
@@ -203,35 +208,36 @@ class Door(object):
         self.reader = reader
         self.name = door_config["name"]
         self.latch = Output(door_config["latch_gpio"], door_config["unlock_value"], door_config["open_delay"])
+        self.open_delay = door_config["open_delay"]
         self.unlocked = False
+        self.last_opened = None
 
     def toggle_lock(self, user):
         public_name = logger.public_name(user)
         self.unlocked ^= True
-        if not self.unlocked:
-            logger.report("%s %s unlocked by %s" % (socket.gethostname(), self.name, public_name))
-            self.latch.deactivate()
-            self.reader.led.deactivate()
-        else:
+        if self.unlocked:
             logger.report("%s %s locked by %s" % (socket.gethostname(), self.name, public_name))
             self.latch.activate()
             self.reader.led.activate()
-
+        else:
+            logger.report("%s %s unlocked by %s" % (socket.gethostname(), self.name, public_name))
+            self.latch.deactivate()
+            self.reader.led.deactivate()
 
     def open_door(self, user):
         now = time.time()
         public_name = logger.public_name(user)
-        if "event mode" in user["permissions"]:
-            self.toggle_lock(user)
+        if self.unlocked:
+            logger.report("%s found %s %s is already unlocked" %
+                        (public_name, socket.gethostname(), self.name))
         else:
-            if self.unlocked:
-                logger.report("%s found %s %s is already unlocked" %
-                            (public_name, socket.gethostname(), self.name))
-            else:
-                logger.report("%s has opened %s %s" %
-                            (public_name, socket.gethostname(), self.name))
-                self.latch.timed_activation()
-
+            logger.report("%s has opened %s %s" %
+                        (public_name, socket.gethostname(), self.name))
+            self.last_opened = now
+            self.latch.activate()
+            time.sleep(self.open_delay)
+            if not self.unlocked:
+                self.latch.deactivate()
 
 class Locker(object):
     # when associated reader sends read event, open correct user's locker
