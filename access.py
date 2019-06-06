@@ -205,21 +205,24 @@ class Door(object):
         self.latch = Output(door_config["latch_gpio"], door_config["unlock_value"], door_config["open_delay"])
         self.unlocked = False
 
+    def toggle_lock(self, user):
+        public_name = logger.public_name(user)
+        self.unlocked ^= True
+        if not self.unlocked:
+            logger.report("%s %s unlocked by %s" % (socket.gethostname(), self.name, public_name))
+            self.latch.deactivate()
+            self.reader.led.deactivate()
+        else:
+            logger.report("%s %s locked by %s" % (socket.gethostname(), self.name, public_name))
+            self.latch.activate()
+            self.reader.led.activate()
+
+
     def open_door(self, user):
         now = time.time()
         public_name = logger.public_name(user)
         if "event mode" in user["permissions"]:
-            self.unlocked ^= True
-            if self.unlocked:
-                logger.report("%s %s unlocked by %s" %
-                            (socket.gethostname(), self.name, public_name))
-                self.latch.activate()
-                self.reader.led.activate()      # FIXME what if this reader doesn't have an LED?
-            else:
-                logger.report("%s %s locked by %s" %
-                            (socket.gethostname(), self.name, public_name))
-                self.latch.deactivate()
-                self.reader.led.deactivate()    # FIXME what if this reader doesn't have an LED?
+            self.toggle_lock(user)
         else:
             if self.unlocked:
                 logger.report("%s found %s %s is already unlocked" %
