@@ -8,6 +8,7 @@
     {
       "name": "front door",
       "is_locker": false,
+      "event_mode_timeout": 10,
       "data0": 4,
       "data1": 17,
       "led": "60.0",

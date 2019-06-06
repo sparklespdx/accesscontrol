@@ -11,6 +11,12 @@
     "permissions": ["active user"],
     "locker": "A"
   },
+  "69,42": {
+    "name": "Master Event Key",
+    "permissions": [
+      "event mode"
+    ]
+  },
   "42,69": {
     "name": "Jane Doe",
     "permissions": ["active user"],
