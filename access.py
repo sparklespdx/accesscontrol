@@ -258,7 +258,7 @@ class Logger(object):
 
     def __init__(self, config):
         self.config = config
-        self.debug_mode = False
+        self.debug_mode = True
 
     def debug(self, message):
         if self.debug_mode:
@@ -333,7 +333,7 @@ def cleanup(a=None, b=None):
 
 config = Config()
 logger = Logger(config)
-bus = SMBus(0)
+bus = SMBus(1)
 
 if __name__ == '__main__':
     initialize(config, logger)
