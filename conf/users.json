@@ -11,10 +11,10 @@
     "permissions": ["active user"],
     "locker": "A"
   },
-  "0254112C": {
+  "69,42": {
     "name": "Master Event Key",
     "permissions": [
-      "active user", "event mode"
+      "event mode"
     ]
   },
   "42,69": {
