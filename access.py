@@ -101,7 +101,7 @@ class CardReader(object):
         else:
             self.is_locker = False
             self.door = Door(reader_config["doors"][0], self)
-            self.event_mode_timeout = reader_config["event_mode_timeout"]
+            self.event_mode_timeout = reader_config.get("event_mode_timeout", None)
         if reader_config.get("led"):
             self.led = Output(reader_config["led"], 1, 1)
         self.name = reader_config["name"]
@@ -189,7 +189,7 @@ class CardReader(object):
                 if my_permission == "*" or my_permission in user["permissions"]:
                     return self.door.open_door(user)
             # event mode unlock
-            if "event mode" in user["permissions"]:
+            if "event mode" in user["permissions"] and self.event_mode_timeout is not None:
                 if self.door.last_opened > time.time() - self.event_mode_timeout or self.door.unlocked:
                     return self.door.toggle_lock(user)
         logger.debug("%s is not authorized for %s" %
