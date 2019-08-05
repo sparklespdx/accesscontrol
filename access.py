@@ -297,8 +297,11 @@ class Logger(object):
             pass
 
     def public_name(self, user):
-        first, last = user["name"].split(" ")
-        return "%s %s." % (first, last[0])
+        if self.config["abbreviate_last_name"]:
+            first, last = user["name"].split(" ")
+            return "%s %s." % (first, last[0])
+        else:
+            return user["name"]
 
     def report(self, subject):
         syslog.syslog(subject)
