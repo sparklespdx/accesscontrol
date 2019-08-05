@@ -317,7 +317,7 @@ class Logger(object):
 def initialize(config, logger):
     GPIO.setmode(GPIO.BCM)
     syslog.openlog("accesscontrol", syslog.LOG_PID, syslog.LOG_AUTH)
-    logger.report("Initializing")
+    logger.debug("Initializing")
     config.add_config_file("users")
     setup_readers()
     # Catch some exit signals
