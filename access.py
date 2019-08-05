@@ -7,7 +7,6 @@ import smtplib
 import threading
 
 from RPi import GPIO
-from smbus import SMBus
 import sys
 import time
 import signal
@@ -349,7 +348,11 @@ def cleanup(a=None, b=None):
 config = Config()
 config.add_config_file("config")
 logger = Logger(config)
-bus = SMBus(1)
+
+bus = None
+if type(config["i2c_bus"]) == int:
+    from smbus import SMBus
+    bus = SMBus(config["i2c_bus"])
 
 if __name__ == '__main__':
     initialize(config, logger)
