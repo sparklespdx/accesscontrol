@@ -217,11 +217,11 @@ class Door(object):
         public_name = logger.public_name(user)
         self.unlocked ^= True
         if self.unlocked:
-            logger.report("%s %s locked by %s" % (socket.gethostname(), self.name, public_name))
+            logger.report("%s %s unlocked by %s" % (socket.gethostname(), self.name, public_name))
             self.latch.activate()
             self.reader.led.activate()
         else:
-            logger.report("%s %s unlocked by %s" % (socket.gethostname(), self.name, public_name))
+            logger.report("%s %s locked by %s" % (socket.gethostname(), self.name, public_name))
             self.latch.deactivate()
             self.reader.led.deactivate()
 
