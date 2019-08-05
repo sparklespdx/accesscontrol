@@ -103,7 +103,10 @@ class CardReader(object):
             self.door = Door(reader_config["doors"][0], self)
             self.event_mode_timeout = reader_config.get("event_mode_timeout", None)
         if reader_config.get("led"):
-            self.led = Output(reader_config["led"], 1, 1)
+            green_value = 1
+            if type(reader_config.get("led_green_value")) == int:
+                green_value = reader_config["led_green_value"]
+            self.led = Output(reader_config["led"], green_value, 1)
         self.name = reader_config["name"]
         self.stream = ""
         self.timer = None
