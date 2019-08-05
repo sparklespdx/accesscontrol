@@ -184,14 +184,14 @@ class CardReader(object):
                 return logger.debug("%s does not have a locker" % user["name"])
             return found_locker.open_locker(user)
         else:
-            # normal user auth
-            for my_permission in self.permissions:
-                if my_permission == "*" or my_permission in user["permissions"]:
-                    return self.door.open_door(user)
             # event mode unlock
             if "event mode" in user["permissions"] and self.event_mode_timeout is not None:
                 if self.door.last_opened > time.time() - self.event_mode_timeout or self.door.unlocked:
                     return self.door.toggle_lock(user)
+            # normal user auth
+            for my_permission in self.permissions:
+                if my_permission == "*" or my_permission in user["permissions"]:
+                    return self.door.open_door(user)
         logger.debug("%s is not authorized for %s" %
                 (user["name"], self.name))
         self.reject_card()
