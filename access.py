@@ -185,7 +185,7 @@ class CardReader(object):
             return found_locker.open_locker(user)
         else:
             # event mode unlock
-            if "event mode" in user["permissions"] and self.event_mode_timeout is not None:
+            if "event host" in user["permissions"] and self.event_mode_timeout is not None:
                 if self.door.last_opened > time.time() - self.event_mode_timeout or self.door.unlocked:
                     return self.door.toggle_lock(user)
             # normal user auth
