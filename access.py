@@ -268,7 +268,7 @@ class Logger(object):
 
     def __init__(self, config):
         self.config = config
-        self.debug_mode = True
+        self.debug_mode = self.config["debug_mode"] or False
 
     def debug(self, message):
         if self.debug_mode:
@@ -313,7 +313,6 @@ def initialize(config, logger):
     GPIO.setmode(GPIO.BCM)
     syslog.openlog("accesscontrol", syslog.LOG_PID, syslog.LOG_AUTH)
     logger.report("Initializing")
-    config.add_config_file("config")
     config.add_config_file("users")
     setup_readers()
     # Catch some exit signals
@@ -342,6 +341,7 @@ def cleanup(a=None, b=None):
 
 
 config = Config()
+config.add_config_file("config")
 logger = Logger(config)
 bus = SMBus(1)
 
