@@ -319,7 +319,7 @@ def initialize(config, logger):
     syslog.openlog("accesscontrol", syslog.LOG_PID, syslog.LOG_AUTH)
     logger.debug("Initializing")
     config.add_config_file("users")
-    setup_readers()
+    readers = setup_readers()
     # Catch some exit signals
     signal.signal(signal.SIGINT, cleanup)   # Ctrl-C
     signal.signal(signal.SIGTERM, cleanup)  # killall python
@@ -329,14 +329,17 @@ def initialize(config, logger):
     # This one will toggle debug messages
     signal.signal(signal.SIGWINCH, logger.toggle_debug)  # killall -WINCH python
     logger.report("%s access control is online" % socket.gethostname())
+    return readers
 
 def rehash(signal=None, b=None):
     logger.report("%s reloading access list" % socket.gethostname())
     config.add_config_file("users")
 
 def setup_readers():
+    readers = []
     for reader in iter(config["readers"]):
-        CardReader(reader)
+        readers.append(CardReader(reader))
+    return readers
 
 def cleanup(a=None, b=None):
     logger.report("%s access control is going offline" % socket.gethostname())
