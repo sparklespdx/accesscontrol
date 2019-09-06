@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://unpkg.com/buefy/dist/buefy.min.css">
+  <script src="https://unpkg.com/vue"></script>
+  <script src="https://unpkg.com/buefy/dist/buefy.min.js"></script>
+  <title>^H Door Control</title>
+</head>
+<body>
+
+  <div id="app">
+    <section>
+      {{ user['email'] }}
+    </section>
+    <section>
+      <b-button @click="getUser()">get username</b-button>
+    </section>
+    <section>
+      <door-panel
+          v-for="i in doorData"
+          :door="i"
+          @door-unlock="performDoorAction(i, 'unlock')"
+          @door-lock="performDoorAction(i, 'lock')"
+          @door-open="performDoorAction(i, 'open')"
+      ></door-panel>
+    </section>
+  </div>
+
+  <script>
+
+    const BACKEND_URL = "http://127.0.0.1:5000";
+
+    Vue.component('door-panel',{
+      props: ['door'],
+      template: `
+      <div class='container'>
+        {{ door.name }}: {{ door.unlocked}}
+        <b-button @click="lock()">
+          Lock
+        </b-button>
+        <b-button @click="unlock()">
+          Unlock
+        </b-button>
+        <b-button @click="open()">
+          Open
+        </b-button>
+      </div>
+      `,
+      methods: {
+        unlock () {
+          this.$emit('door-unlock')
+        },
+        lock () {
+          this.$emit('door-lock')
+        },
+        open () {
+          this.$emit('door-open')
+        }
+      }
+    })
+
+    var app = new Vue({
+      el: '#app',
+      data () {
+        return {
+          user: {},
+          doorData: []
+        }
+      },
+      methods: {
+        doorStatus () {
+          fetch(`${BACKEND_URL}/doors`)
+            .then(response => response.json())
+            .then((data) => {
+              this.doorData = data['doors'];
+              console.log("fetched door data");
+            })
+        },
+        performDoorAction (door, action) {
+          fetch(`${BACKEND_URL}/doors/${door.name}/${action}`, {method: 'POST'})
+            .then(response => response.json())
+            .then((data) => {
+              this.doorStatus();
+              console.log(`performed ${action} on ${door}`);
+            })
+        },
+        getUser () {
+          fetch(`${BACKEND_URL}/user`)
+            .then(response => response.json())
+            .then((data) => {
+              this.user = data;
+              console.log("got user data");
+            })
+        }
+      },
+
+      created () {
+        this.doorStatus();
+      }
+    });
+
+  </script>
+</body>
+</html>
